@@ -30,22 +30,24 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <script type="text/babel">
+      const jsonLocalStorage = {
+        setItem: (key, value) => {
+          localStorage.setItem(key, JSON.stringify(value));
+        },
+        getItem: (key) => {
+          return JSON.parse(localStorage.getItem(key));
+        },
+      };
 
-      console.log("야옹");
+      const cat1 = "./cat.png";
+      const cat2 = "./cat2.jpeg";
+      const cat3 = "./cat3.jpeg";
 
-      const title = (
-        <h1>1번째 고양이 가라사대</h1>
-      );
       const Title = (props) => {
         return(
           <h1>{props.children}</h1>
         )
       }
-      const catItem = (
-        <li>
-          <img src="./cat.png"></img>
-        </li>
-      )
       // 대문자로 써야함!
       function CatItem(props) {
         return (
@@ -54,23 +56,16 @@
           </li>
         )
       }
-      function Favorites(props) {
+      function Favorites({favorites}) {
         return (
           <ul className="favorites">
-            <CatItem img="./cat.png"/>
-            <CatItem img="./cat2.jpeg"/>
-            <CatItem img="./cat3.jpeg"/>
+            {favorites.map((cat) => (
+              <CatItem img={cat} key={cat}/> 
+            ))}
           </ul>
-        )
+        );
       }
-      const MainCard = ({img}) => {
-        // handle 어쩌구로 이름 짓는 것이 리액트의 관례
-        function handleHeartClick() {
-          console.log("하트 눌렀음")
-;        }
-        function handleHeartMouseOver() {
-          console.log("하트 스쳐 지나감")
-;        }
+      const MainCard = ({img, onHeartClick}) => {
         return (
             <div className="main-card">
             <img
@@ -79,46 +74,82 @@
               width="400"
             />
             <button 
-              onClick={handleHeartClick}
-              onMouseOver={handleHeartMouseOver}
+              onClick={onHeartClick}
             >🤍</button>
           </div>
         )
       }
-      const Form = ({handleFormSubmit}) => {
+      const Form = ({updateMainCat}) => {
+        const includesHangul = (text) => /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/i.test(text);
+        const [value, setValue] = React.useState("");
+        const [errorMessage, setErrorMessage] = React.useState("");
+        
+        function handleInputChange(e) {
+          const userValue = e.target.value;
+          setErrorMessage("");
+          if (includesHangul(userValue)) {
+            setErrorMessage("한글은 입력할 수 없습니다");
+          }
+          setValue(userValue.toUpperCase());
+        }
+        function handleFormSubmit(e) {
+          e.preventDefault();
+          setErrorMessage("");
+          if(value===""){
+            setErrorMessage("빈 값으로 만들 수 없습니다");
+            return;  
+          }
+          updateMainCat();
+        }
         return (
           <form onSubmit={handleFormSubmit}>
-            <input type="text" name="name" placeholder="영어 대사를 입력해주세요" />
+            <input 
+              type="text" 
+              name="name"
+              placeholder="영어 대사를 입력해주세요"
+              value={value}
+              onChange={handleInputChange}
+              />
             <button type="submit">생성</button>
+            <p style={{color:'red'}}>{errorMessage}</p>
           </form>
         );
       };
 
       const App = () => {
-        const [counter, setCounter] = React.useState(1);
-        const [catImage, setCatImage] = React.useState("cat3.jpeg");
+        const [counter, setCounter] = React.useState(
+          jsonLocalStorage.getItem("counter")
+        );
+        const [mainCat, setMainCat] = React.useState(cat1);
+        const [favorites, setFavorites] = React.useState(
+          jsonLocalStorage.getItem("favorites") || []
+        );
         
-        console.log("카운터", counter);
+        function updateMainCat() {
+          setMainCat(cat2)
+          const nextCounter = counter + 1;
+          setCounter(nextCounter);
+          jsonLocalStorage.setItem("counter", nextCounter);
+        }
 
-        function handleFormSubmit(e) {
-          e.preventDefault();
-          console.log("폼 전송됨");
-          setCounter(counter+1);
-          setCatImage("cat2.jpeg")
+        // handle 어쩌구로 이름 짓는 것이 리액트의 관례
+        function handleHeartClick() {
+          const nextFavorites = [...favorites, mainCat];
+          setFavorites(nextFavorites);
+          jsonLocalStorage.setItem("favorites", nextFavorites);
         }
 
         return (
           <div>
-            <Title>{counter}번째 고양이 가라사대</Title>
-            <Form handleFormSubmit={handleFormSubmit}></Form>
-            <MainCard img={catImage}></MainCard>
-            <Favorites />
+            <Title>{counter}번째 고양이입니당</Title>
+            <Form updateMainCat={updateMainCat}></Form>
+            <MainCard img={mainCat} onHeartClick={handleHeartClick}></MainCard>
+            <Favorites favorites={favorites}/>
           </div>
         );
       };
 
       const 여기다가그려 = document.querySelector("#app");
-
       const root = ReactDOM.createRoot(여기다가그려);
       root.render(<App />);
 
